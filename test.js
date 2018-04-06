@@ -3,10 +3,10 @@ import "./src/Dasher.css";
 import Dasher from "./src/Dasher";
 
 const dasher = new Dasher({
-  phantomHandler: handler
+  // phantomHandler: handler
 });
 dasher.start();
 
-function handler(deltaY) {
-  console.log(deltaY);
+function handler(dash, value) {
+  console.log('dash is ', dash)
 }

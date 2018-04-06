@@ -71,7 +71,7 @@ require = (function (modules, cache, entry) {
 
   // Override the current require with this new one
   return newRequire;
-})({6:[function(require,module,exports) {
+})({14:[function(require,module,exports) {
 var bundleURL = null;
 function getBundleURLCached() {
   if (!bundleURL) {
@@ -101,7 +101,7 @@ function getBaseURL(url) {
 
 exports.getBundleURL = getBundleURLCached;
 exports.getBaseURL = getBaseURL;
-},{}],5:[function(require,module,exports) {
+},{}],10:[function(require,module,exports) {
 var bundle = require('./bundle-url');
 
 function updateLink(link) {
@@ -132,13 +132,13 @@ function reloadCSS() {
 }
 
 module.exports = reloadCSS;
-},{"./bundle-url":6}],3:[function(require,module,exports) {
+},{"./bundle-url":14}],6:[function(require,module,exports) {
 
         var reloadCSS = require('_css_loader');
         module.hot.dispose(reloadCSS);
         module.hot.accept(reloadCSS);
       
-},{"_css_loader":5}],10:[function(require,module,exports) {
+},{"_css_loader":10}],19:[function(require,module,exports) {
 'use strict'
 
 exports.byteLength = byteLength
@@ -256,7 +256,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],11:[function(require,module,exports) {
+},{}],18:[function(require,module,exports) {
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = (nBytes * 8) - mLen - 1
@@ -342,14 +342,14 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],9:[function(require,module,exports) {
+},{}],20:[function(require,module,exports) {
 var toString = {}.toString;
 
 module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
 
-},{}],8:[function(require,module,exports) {
+},{}],16:[function(require,module,exports) {
 
 var global = (1,eval)("this");
 /*!
@@ -2142,7 +2142,7 @@ function isnan (val) {
   return val !== val // eslint-disable-line no-self-compare
 }
 
-},{"base64-js":10,"ieee754":11,"isarray":9,"buffer":8}],7:[function(require,module,exports) {
+},{"base64-js":19,"ieee754":18,"isarray":20,"buffer":16}],12:[function(require,module,exports) {
 var global = (1,eval)("this");
 var Buffer = require("buffer").Buffer;
 /**
@@ -19243,7 +19243,7 @@ var Buffer = require("buffer").Buffer;
   }
 }.call(this));
 
-},{"buffer":8}],4:[function(require,module,exports) {
+},{"buffer":16}],7:[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -19277,25 +19277,71 @@ var Dasher = function () {
     this.MAX_SCROLLSPEED = opts.maxScrollSpeed || 15;
     this.STD_MENU = opts.stdMenu || true;
     // this.PHANTOM          = opts.phantomDash || true; 
-    this.PHANTOM_HANDLER = opts.phantomHandler || false;
+    // this.PHANTOM_HANDLER  = opts.phantomHandler || false;
     this.TIMER = Date.now();
     this.ACTIVE_DASH = _lodash2.default.first(this.DASHES);
     this.SCROLL_HISTORY = [];
     this.PHANTOM_HISTORY = 0;
     this.TEST = 0;
 
+    this.PHANTOM_ENABLED = true;
+    this.PHANTOM_PROP = 'opacity';
+    this.PHANTOM_START = true;
     this.switch = false;
     this.done = false;
-    this.scrollings = 0;
+
+    this.PHANTOM_HANDLER = function () {
+      var dash = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+      var value = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+
+      if (dash && value && opts.phantomHandler) {
+        return opts.phantomHandler(dash, value);
+      } else if (opts.phantomAnimation) {
+        return this.phantomAnimation(dash, value, opts.phantomAnimation);
+      } else {
+        // _default_
+        return this.phantomDefaultAnimation(dash, value);
+      }
+    };
   }
 
   _createClass(Dasher, [{
+    key: "phantomDefaultAnimation",
+    value: function phantomDefaultAnimation(dash, value) {
+
+      console.log(dash, value);
+      var property = 'opacity';
+      this.PHANTOM_PROP = property;
+      if (this.PHANTOM_START) {
+        this.PHANTOM_PRE = dash.style[property];
+        this.PHANTOM_START = false;
+      }
+      dash.style[property] = value;
+    }
+  }, {
+    key: "phantomAnimation",
+    value: function phantomAnimation(dash, value, animation) {
+      console.log('phantom Animation');
+    }
+  }, {
+    key: "restorePhantomDash",
+    value: function restorePhantomDash(dash) {
+      var _this = this;
+
+      setTimeout(function () {
+        _this.PHANTOM_START = true;
+        console.log('restting dash: ', dash);
+        console.log('PRE PHANTOM: ', _this.PHANTOM_PRE);
+        dash.style[_this.PHANTOM_PROP] = _this.PHANTOM_PRE;
+        console.log('resetting...');
+      }, this.DASH_SPEED);
+    }
+  }, {
     key: "onWheel",
     value: function onWheel(e) {
       this.updateScrollHistory(e.deltaY);
 
       if (this.isOverflowHandler(this.ACTIVE_DASH, e) && !this.switch) {
-
         return this.handleOverflowScroll(e);
       } else {
 
@@ -19305,12 +19351,19 @@ var Dasher = function () {
             this.switch = true;
           }
         } else if (this.switch && !this.done) {
-          this.PHANTOM_HISTORY += 1;
+          this.isAtBottom(this.ACTIVE_DASH, e);
+
+          var x = e.deltaY > 0 ? 1 : -1;
+          console.log(x);
+          this.PHANTOM_HISTORY += x;
           this.handlePhantomScroll(this.ACTIVE_DASH, e);
 
           if (this.PHANTOM_HISTORY >= 100) {
-            this.ACTIVE_DASH.style.opacity = 1;
+            this.restorePhantomDash(this.ACTIVE_DASH);
             this.done = true;
+            this.switch = false;
+          }
+          if (this.PHANTOM_HISTORY < 0) {
             this.switch = false;
           }
         } else {
@@ -19325,8 +19378,34 @@ var Dasher = function () {
     key: "handlePhantomScroll",
     value: function handlePhantomScroll(dash, e) {
       var value = 1 - this.PHANTOM_HISTORY / 100;
-      console.log(this.PHANTOM_HISTORY);
-      dash.style.opacity = value;
+      this.PHANTOM_HANDLER(dash, value);
+    }
+  }, {
+    key: "isAtTop",
+    value: function isAtTop(dash, e) {}
+  }, {
+    key: "isAtBottom",
+    value: function isAtBottom(dash, e) {
+      var inner = dash.querySelector('.inner');
+      var matrix = window.getComputedStyle(inner).transform;
+      var matrixHeight = this.getMatrixHeight(matrix);
+      var newOffset = matrixHeight - e.deltaY;
+      var innerHeight = inner.offsetHeight - window.innerHeight;
+
+      // also transform inner for seamlessly connecting.
+      if (innerHeight + newOffset <= 0) {
+        //bottom
+        console.log('bottom');
+        // inner.style.transform = `matrix(1,0,0,1,0,${innerHeight * -1})`;
+        return true;
+      } else if (newOffset >= 0) {
+        //top
+        // inner.style.transform = `matrix(1,0,0,1,0,1)`;
+        console.log('top');
+        return true;
+      } else {
+        return false; //overflow
+      }
     }
   }, {
     key: "isPhantomHandler",
@@ -19445,15 +19524,19 @@ var Dasher = function () {
 
       var isAccelerating = this.isAccelerating(this.SCROLL_HISTORY);
 
-      if (isAccelerating && nextDash && enoughTimePassed) {
-        this.SCROLL_HISTORY = [];
-        this.TIMER = Date.now();
+      if (nextDash && enoughTimePassed) {
 
-        this.setActiveDash(nextDash);
-        if (this.STD_MENU) {
-          this.setActiveMenu(nextDash);
+        if (isAccelerating || this.PHANTOM_ENABLED) {
+
+          this.SCROLL_HISTORY = [];
+          this.TIMER = Date.now();
+
+          this.setActiveDash(nextDash);
+          if (this.STD_MENU) {
+            this.setActiveMenu(nextDash);
+          }
+          this.moveNextDash(nextDash);
         }
-        this.moveNextDash(nextDash);
       }
     }
   }, {
@@ -19507,13 +19590,13 @@ var Dasher = function () {
   }, {
     key: "setDashingState",
     value: function setDashingState() {
-      var _this = this;
+      var _this2 = this;
 
       this.DASHING = true;
       this.DASHER.classList.add("dashing");
       setTimeout(function () {
-        _this.DASHING = false;
-        _this.DASHER.classList.remove("dashing");
+        _this2.DASHING = false;
+        _this2.DASHER.classList.remove("dashing");
       }, this.DASH_SPEED);
     }
   }, {
@@ -19568,7 +19651,7 @@ var Dasher = function () {
   }, {
     key: "_initStdMenu",
     value: function _initStdMenu() {
-      var _this2 = this;
+      var _this3 = this;
 
       var ul = document.createElement("ul");
       ul.classList.add("dasher-menu");
@@ -19581,7 +19664,7 @@ var Dasher = function () {
           li.classList.add('active');
         }
         li.onclick = function (e) {
-          return _this2.handleMenuClick(e);
+          return _this3.handleMenuClick(e);
         };
         li.dataset.index = i;
         li.style.transition = "all " + this.DASH_SPEED / 1000 + "s ease";
@@ -19610,7 +19693,7 @@ var Dasher = function () {
 }();
 
 exports.default = Dasher;
-},{"lodash":7}],2:[function(require,module,exports) {
+},{"lodash":12}],4:[function(require,module,exports) {
 "use strict";
 
 require("./src/Dasher.css");
@@ -19622,14 +19705,14 @@ var _Dasher2 = _interopRequireDefault(_Dasher);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var dasher = new _Dasher2.default({
-  phantomHandler: handler
+  // phantomHandler: handler
 });
 dasher.start();
 
-function handler(deltaY) {
-  console.log(deltaY);
+function handler(dash, value) {
+  console.log('dash is ', dash);
 }
-},{"./src/Dasher.css":3,"./src/Dasher":4}],19:[function(require,module,exports) {
+},{"./src/Dasher.css":6,"./src/Dasher":7}],26:[function(require,module,exports) {
 
 var global = (1, eval)('this');
 var OldModule = module.bundle.Module;
@@ -19651,7 +19734,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = '' || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + '49568' + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + '58109' + '/');
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);
 
@@ -19752,5 +19835,5 @@ function hmrAccept(bundle, id) {
     return hmrAccept(global.require, id);
   });
 }
-},{}]},{},[19,2])
-//# sourceMappingURL=/dist/1183bc531a3fc7d9f7715da7253143cb.map
+},{}]},{},[26,4])
+//# sourceMappingURL=/dist/dasher.map

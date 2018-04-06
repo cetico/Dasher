@@ -14,16 +14,57 @@ class Dasher {
     this.MAX_SCROLLSPEED  = opts.maxScrollSpeed || 15;
     this.STD_MENU         = opts.stdMenu || true;
     // this.PHANTOM          = opts.phantomDash || true; 
-    this.PHANTOM_HANDLER  = opts.phantomHandler || false;
+    // this.PHANTOM_HANDLER  = opts.phantomHandler || false;
     this.TIMER            = Date.now();
     this.ACTIVE_DASH      = _.first(this.DASHES);
     this.SCROLL_HISTORY   = [];
     this.PHANTOM_HISTORY  = 0;
     this.TEST             = 0;
 
+    this.PHANTOM_ENABLED  = true;
+    this.PHANTOM_PROP     = 'opacity';
+    this.PHANTOM_START    = true;
     this.switch           = false;
     this.done             = false;
-    this.scrollings       = 0;
+
+    this.PHANTOM_HANDLER = function(dash = null, value = null) {
+      if(dash && value && opts.phantomHandler) {
+        return opts.phantomHandler(dash, value);
+      } 
+      else if (opts.phantomAnimation) {
+        return this.phantomAnimation(dash, value, opts.phantomAnimation) 
+      } else {
+        // _default_
+        return this.phantomDefaultAnimation(dash, value);
+      }
+    }
+
+  }
+
+  phantomDefaultAnimation(dash, value) {
+
+    console.log(dash, value)
+    const property = 'opacity';
+    this.PHANTOM_PROP = property;
+    if (this.PHANTOM_START) {
+      this.PHANTOM_PRE   = dash.style[ property ];
+      this.PHANTOM_START = false;
+    }
+    dash.style[ property ] = value;
+  }
+
+  phantomAnimation(dash, value, animation) {
+    console.log('phantom Animation')
+  }
+
+  restorePhantomDash(dash) {
+    setTimeout(() => {
+      this.PHANTOM_START = true;
+      console.log('restting dash: ', dash);
+      console.log('PRE PHANTOM: ', this.PHANTOM_PRE);
+      dash.style[ this.PHANTOM_PROP ] = this.PHANTOM_PRE;
+      console.log('resetting...');
+    }, this.DASH_SPEED);
   }
 
   onWheel(e) {
@@ -32,7 +73,6 @@ class Dasher {
 
     
     if(this.isOverflowHandler(this.ACTIVE_DASH, e) && !this.switch) {
-      
       return this.handleOverflowScroll(e);
       
     } else {
@@ -43,12 +83,19 @@ class Dasher {
           this.switch = true;
         } 
       } else if(this.switch && !this.done) {
-          this.PHANTOM_HISTORY += 1;
+          this.isAtBottom(this.ACTIVE_DASH, e);
+          
+          const x = e.deltaY > 0 ? 1 : -1;
+          console.log(x);
+          this.PHANTOM_HISTORY += x;
           this.handlePhantomScroll(this.ACTIVE_DASH, e);
           
           if(this.PHANTOM_HISTORY >= 100) {
-            this.ACTIVE_DASH.style.opacity = 1;
+            this.restorePhantomDash(this.ACTIVE_DASH);
             this.done = true;
+            this.switch = false;
+          }
+          if(this.PHANTOM_HISTORY < 0) {
             this.switch = false;
           }
       }
@@ -60,14 +107,41 @@ class Dasher {
         return this.handleDash(e);
       }
       
-    }
+    } 
   }
  
   
   handlePhantomScroll(dash, e) {
     const value = 1 - (this.PHANTOM_HISTORY / 100);
-    console.log(this.PHANTOM_HISTORY)
-    dash.style.opacity = value; 
+    this.PHANTOM_HANDLER(dash, value);
+  }
+
+  isAtTop(dash, e) {
+
+  }
+
+  
+
+  isAtBottom(dash, e) {
+    const inner = dash.querySelector('.inner');
+    const matrix = window.getComputedStyle(inner).transform;
+    const matrixHeight = this.getMatrixHeight(matrix);
+    const newOffset = matrixHeight - e.deltaY;
+    const innerHeight = inner.offsetHeight - window.innerHeight;
+    
+    // also transform inner for seamlessly connecting.
+    if(innerHeight + newOffset <= 0) { //bottom
+      console.log('bottom')
+      // inner.style.transform = `matrix(1,0,0,1,0,${innerHeight * -1})`;
+      return true;
+    }
+    else if ( newOffset >= 0) { //top
+      // inner.style.transform = `matrix(1,0,0,1,0,1)`;
+      console.log('top')
+      return true;
+    } else {
+      return false; //overflow
+    }
   }
 
   isPhantomHandler(dash, e) {
@@ -182,15 +256,19 @@ class Dasher {
     
     const isAccelerating = this.isAccelerating(this.SCROLL_HISTORY);
 
-    if( isAccelerating && nextDash && enoughTimePassed ) {
-        this.SCROLL_HISTORY = [];
-        this.TIMER = Date.now();             
-        
-        this.setActiveDash(nextDash);
-        if( this.STD_MENU ) {
-          this.setActiveMenu(nextDash);
+    if( nextDash && enoughTimePassed ) {
+
+        if( isAccelerating || this.PHANTOM_ENABLED ) {
+
+          this.SCROLL_HISTORY = [];
+          this.TIMER = Date.now();             
+          
+          this.setActiveDash(nextDash);
+          if( this.STD_MENU ) {
+            this.setActiveMenu(nextDash);
+          }
+          this.moveNextDash(nextDash);
         }
-        this.moveNextDash(nextDash);
       }
   }
 
