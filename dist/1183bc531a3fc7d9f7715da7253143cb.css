@@ -1,0 +1,48 @@
+html, body {
+  overflow: hidden;
+}
+
+body {
+padding: 0; margin: 0;
+}
+
+/* h1, h2 {
+  margin: 0;
+} */
+
+.dasher-menu {
+  position: fixed;
+  top: 50%;
+  right: 5%;
+  list-style: none;
+  transform: translate(0, -50%);
+}
+
+.dasher-menu li {
+  width: 10px;
+  height: 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+  margin: 20px;
+  cursor: pointer;
+}
+
+.dasher-menu li.active {
+  border-radius: 50%;
+  transform: scale(1.5);
+}
+
+.d1 {
+  background-color: chocolate;
+}
+
+.d2 {
+  background-color: deeppink;
+}
+
+.d3 {
+  background-color: deepskyblue;
+}
+
+.d4 {
+  background-color: khaki;
+}
