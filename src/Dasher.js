@@ -1,4 +1,10 @@
-import _ from "lodash";
+import first from "lodash/first";
+import last from "lodash/last";
+
+const _ = {
+  first,
+  last
+}
 
 class Dasher {
 
@@ -71,22 +77,135 @@ class Dasher {
     this.updateScrollHistory(e.deltaY);
 
 
-    
+    // if not at edges and switch is false. Scroll within section.
     if(this.isOverflowHandler(this.ACTIVE_DASH, e) && !this.switch) {
       return this.handleOverflowScroll(e);
-      
     } else {
-
+      // If switch is not turned on yet:
       if(!this.switch) {
-
+        // if we hit edges once. Turn switch on untill we are this.done.
         if(this.isAtEdges(this.ACTIVE_DASH, e)) {
           this.switch = true;
         } 
-      } else if(this.switch && !this.done) {
-          this.isAtBottom(this.ACTIVE_DASH, e);
+      } // if switch is on and we are not done: Remember: Overflowscroll disabled because switch is on!
+      else if(this.switch && !this.done) {
+          
+          // TO-DO Determine if at bottom or at top.
+          // 
+
+          // this.determineLocation(this.ACTIVE_DASH, e);
+
+          const direction = this.getDirection(e.deltaY);
+
+          if(this.isAtBottom(this.ACTIVE_DASH)) {
+            let amount = 0;
+            
+            if(direction.direction === 'down') {
+              console.log('going down');
+              amount = 1;
+              this.PHANTOM_HISTORY += amount;
+              const value = 1 - (this.PHANTOM_HISTORY / 100);
+              this.PHANTOM_HANDLER(this.ACTIVE_DASH, value);
+            }
+
+            //TO-DO break free if phantom history is -1;
+            else if(direction.direction === 'up') {
+              amount = -1;
+              this.PHANTOM_HISTORY += amount;
+              const value = 1 - (this.PHANTOM_HISTORY / 100);
+
+              this.PHANTOM_HANDLER(this.ACTIVE_DASH, value);
+              console.log(this.PHANTOM_HISTORY);
+            }
+
+            if(this.PHANTOM_HISTORY === 100) {
+              this.restorePhantomDash(this.ACTIVE_DASH);
+              this.done = true;
+              this.switch = false;
+            }
+              else if (this.PHANTOM_HISTORY <= 0) {
+                this.switch = false;
+              }
+
+          }
+          else if (this.isAtTop(this.ACTIVE_DASH)) {
+            let amount = 0;
+
+
+
+            if(direction.direction === 'down') {
+              amount = -1;
+              this.PHANTOM_HISTORY += amount;
+              const value = 1 - (this.PHANTOM_HISTORY / 100);
+
+              this.PHANTOM_HANDLER(this.ACTIVE_DASH, value);
+            }
+
+            else if (direction.direction === 'up') {
+              amount = 1;
+              this.PHANTOM_HISTORY += amount;
+              const value = 1 - (this.PHANTOM_HISTORY / 100);
+              this.PHANTOM_HANDLER(this.ACTIVE_DASH, value);
+            }
+
+            if( this.PHANTOM_HISTORY === 100 ) {
+              this.restorePhantomDash(this.ACTIVE_DASH);
+              this.done = true;
+              this.switch = false;
+            } 
+            else if (this.PHANTOM_HISTORY <= 0) {
+              this.switch = false;
+            }
+          }
+
+          return;
+          // this.isAtBottom(this.ACTIVE_DASH, e);
           
           const x = e.deltaY > 0 ? 1 : -1;
-          console.log(x);
+          
+
+
+          // console.log(direction);
+
+          if(direction.direction === 'down') {
+            // console.log('down');
+
+            const amount = 1;
+            this.PHANTOM_HISTORY += amount;
+            const value = 1 - (this.PHANTOM_HISTORY / 100);
+            this.PHANTOM_HANDLER(this.ACTIVE_DASH, value);
+
+            if(this.PHANTOM_HISTORY >= 100) {
+              this.restorePhantomDash(this.ACTIVE_DASH);
+              this.done = true;
+              this.switch = false;
+            }
+            if(this.PHANTOM_HISTORY < 0) {
+              this.switch = false;
+            }
+          } 
+
+          else if (direction.direction === 'up') {
+
+            if(this.isAtTop(this.ACTIVE_DASH, e)) { // at bottom
+
+              const amount = -1;
+              this.PHANTOM_HISTORY += amount;
+              const value = 1 - (this.PHANTOM_HISTORY / 100);
+              this.PHANTOM_HANDLER(this.ACTIVE_DASH, value);
+              
+              if(this.PHANTOM_HISTORY < 0) {
+                this.switch = false;
+              }
+            } else { // at top.
+
+            }
+          }
+
+
+          
+          return;
+          // ============ ///
           this.PHANTOM_HISTORY += x;
           this.handlePhantomScroll(this.ACTIVE_DASH, e);
           
@@ -101,6 +220,7 @@ class Dasher {
       }
 
        else {
+        //  console.log('switch');
          this.PHANTOM_HISTORY = 0;
          this.done = false;
          this.switch = false;
@@ -109,40 +229,57 @@ class Dasher {
       
     } 
   }
- 
+
+
+  isAtBottom(dash) {
+    const inner = dash.querySelector('.inner');
+    const matrix = window.getComputedStyle(inner).transform;
+    const matrixOffset = this.getMatrixHeight(matrix);
+
+    // console.log(window.innerHeight + Math.abs(matrixOffset));
+    return window.innerHeight + Math.abs(matrixOffset) === inner.scrollHeight;
+  }
+
+  isAtTop(dash) {
+    const inner = dash.querySelector('.inner');
+    const matrix = window.getComputedStyle(inner).transform;
+    const matrixOffset = this.getMatrixHeight(matrix);
+    console.log('calculating if at top')
+
+    return matrixOffset === 0;
+  }
+
   
   handlePhantomScroll(dash, e) {
     const value = 1 - (this.PHANTOM_HISTORY / 100);
     this.PHANTOM_HANDLER(dash, value);
   }
 
-  isAtTop(dash, e) {
 
-  }
 
   
 
-  isAtBottom(dash, e) {
-    const inner = dash.querySelector('.inner');
-    const matrix = window.getComputedStyle(inner).transform;
-    const matrixHeight = this.getMatrixHeight(matrix);
-    const newOffset = matrixHeight - e.deltaY;
-    const innerHeight = inner.offsetHeight - window.innerHeight;
+  // isAtBottom(dash, e) {
+  //   const inner = dash.querySelector('.inner');
+  //   const matrix = window.getComputedStyle(inner).transform;
+  //   const matrixHeight = this.getMatrixHeight(matrix);
+  //   const newOffset = matrixHeight - e.deltaY;
+  //   const innerHeight = inner.offsetHeight - window.innerHeight;
     
-    // also transform inner for seamlessly connecting.
-    if(innerHeight + newOffset <= 0) { //bottom
-      console.log('bottom')
-      // inner.style.transform = `matrix(1,0,0,1,0,${innerHeight * -1})`;
-      return true;
-    }
-    else if ( newOffset >= 0) { //top
-      // inner.style.transform = `matrix(1,0,0,1,0,1)`;
-      console.log('top')
-      return true;
-    } else {
-      return false; //overflow
-    }
-  }
+  //   // also transform inner for seamlessly connecting.
+  //   if(innerHeight + newOffset <= 0) { //bottom
+  //     console.log('bottom')
+  //     // inner.style.transform = `matrix(1,0,0,1,0,${innerHeight * -1})`;
+  //     return true;
+  //   }
+  //   else if ( newOffset >= 0) { //top
+  //     // inner.style.transform = `matrix(1,0,0,1,0,1)`;
+  //     console.log('top')
+  //     return true;
+  //   } else {
+  //     return false; //overflow
+  //   }
+  // }
 
   isPhantomHandler(dash, e) {
     
@@ -176,8 +313,8 @@ class Dasher {
 
   isOverflowHandler(dash, e) {
     const overflow = dash.scrollHeight > window.innerHeight;
-    
-    
+    // console.log('isOverFlowHandler overflow: ', overflow)
+    // console.log('isOverFlowHandler !isAtEdges: ', !this.isAtEdges(dash, e))
     return overflow && !this.isAtEdges(dash, e);
   }
 
@@ -194,7 +331,7 @@ class Dasher {
       return true;
     }
     else if ( newOffset >= 0) { //top
-      inner.style.transform = `matrix(1,0,0,1,0,1)`;
+      inner.style.transform = `matrix(1,0,0,1,0,0)`;
       return true;
     } else {
       return false; //overflow
